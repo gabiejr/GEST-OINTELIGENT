@@ -15,6 +15,7 @@ export interface PoliticalProfile {
   slogan: string;
   voteGoal?: number; // Meta de votos
   number?: string;
+  phone?: string; // Telefone para receber lembretes de agenda
 }
 
 export interface CaboEleitoral {
@@ -35,12 +36,24 @@ export interface Voter {
   email: string;
   address: string;
   neighborhood: string;
-  city: string; // Nova propriedade
+  city: string; 
   observations: string;
   isFamilyMember: boolean;
   helpRecords?: HelpRecord[];
   createdAt: string;
   caboId?: string; // ID do cabo eleitoral responsável por este eleitor
+}
+
+export interface Appointment {
+  id: string;
+  title: string;
+  description: string;
+  date: string; // ISO string YYYY-MM-DD
+  time: string;
+  location: string;
+  voterId?: string;
+  status: 'pending' | 'completed';
+  type: 'visita' | 'reuniao' | 'evento' | 'outro';
 }
 
 export interface VoterFormData extends Omit<Voter, 'id' | 'createdAt' | 'helpRecords'> {}

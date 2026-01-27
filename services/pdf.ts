@@ -1,7 +1,7 @@
 
 import { jsPDF } from "jspdf";
 import "jspdf-autotable";
-import { Voter, PoliticalProfile, CaboEleitoral } from "../types";
+import { Voter, PoliticalProfile, CaboEleitoral, Appointment } from "../types";
 
 function addPoliticianHeader(doc: jsPDF, politician?: PoliticalProfile, isLandscape = true) {
   const width = isLandscape ? 283 : 196;
@@ -101,7 +101,6 @@ export function exportDetailedFinancialReportPDF(voters: Voter[], politician: Po
     });
   });
 
-  // Ordenar por data (mais recente primeiro)
   allRecords.sort((a, b) => {
     const dateA = a[0].split('/').reverse().join('-');
     const dateB = b[0].split('/').reverse().join('-');
@@ -118,9 +117,6 @@ export function exportDetailedFinancialReportPDF(voters: Voter[], politician: Po
     columnStyles: {
       4: { halign: 'right', fontStyle: 'bold' },
       1: { fontStyle: 'bold' }
-    },
-    didDrawPage: (data: any) => {
-      // Rodapé em cada página se necessário, ou apenas no fim
     }
   });
 
@@ -153,7 +149,6 @@ export function exportFullCampaignOverviewPDF(voters: Voter[], cabos: CaboEleito
   doc.setTextColor(100, 116, 139);
   doc.text(`Data do Relatório: ${now}`, 14, 38);
 
-  // Stats Box
   doc.setFillColor(248, 250, 252);
   doc.roundedRect(14, 45, 182, 40, 3, 3, 'F');
   
@@ -172,7 +167,6 @@ export function exportFullCampaignOverviewPDF(voters: Voter[], cabos: CaboEleito
   doc.setTextColor(67, 56, 202);
   doc.text(`PROGRESSO DA META: ${progress}%`, 120, 65);
 
-  // Cabos Table
   doc.setFontSize(14);
   doc.setTextColor(30, 41, 59);
   doc.text("Desempenho por Liderança", 14, 100);
@@ -192,7 +186,6 @@ export function exportFullCampaignOverviewPDF(voters: Voter[], cabos: CaboEleito
     styles: { fontSize: 9 }
   });
 
-  // Neighborhood Summary
   const lastY = (doc as any).lastAutoTable.finalY + 15;
   doc.text("Distribuição Geográfica (Top Bairros/Cidades)", 14, lastY);
   
@@ -376,4 +369,42 @@ export function exportMonthlyFinancialReportPDF(voters: Voter[], politician?: Po
   }
 
   doc.save(`financeiro_${new Date().getTime()}.pdf`);
+}
+
+// Added exportAgendaPDF to fix "no exported member 'exportAgendaPDF'" error
+export function exportAgendaPDF(appointments: Appointment[], politician: PoliticalProfile) {
+  const doc = new jsPDF();
+  const now = new Date().toLocaleString("pt-BR");
+  
+  addPoliticianHeader(doc, politician, false);
+
+  doc.setFontSize(22);
+  doc.setTextColor(67, 56, 202);
+  doc.text("Agenda de Compromissos", 14, 30);
+
+  doc.setFontSize(10);
+  doc.setTextColor(100, 116, 139);
+  doc.text(`Relatório de Atividades | Gerado em: ${now}`, 14, 38);
+
+  const tableColumn = ["Data", "Hora", "Atividade", "Local", "Status"];
+  const tableRows = appointments
+    .sort((a, b) => new Date(`${a.date}T${a.time}`).getTime() - new Date(`${b.date}T${b.time}`).getTime())
+    .map((apt) => [
+      new Date(apt.date).toLocaleDateString('pt-BR'),
+      apt.time,
+      apt.title,
+      apt.location,
+      apt.status === 'completed' ? 'Concluído' : 'Pendente'
+    ]);
+
+  (doc as any).autoTable({
+    head: [tableColumn],
+    body: tableRows,
+    startY: 45,
+    theme: 'striped',
+    headStyles: { fillColor: [67, 56, 202] },
+    styles: { fontSize: 9 }
+  });
+
+  doc.save(`agenda_campanha_${new Date().getTime()}.pdf`);
 }

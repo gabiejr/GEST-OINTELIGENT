@@ -5,14 +5,12 @@ import {
   exportVotersToPDF, 
   exportDetailedFinancialReportPDF, 
   exportFullCampaignOverviewPDF, 
-  exportMonthlyFinancialReportPDF 
+  exportMonthlyFinancialReportPDF
 } from '../services/pdf';
 import { 
-  FileText, 
   Users, 
   DollarSign, 
   BarChart3, 
-  Download, 
   ShieldCheck, 
   PieChart, 
   Briefcase,
@@ -59,7 +57,6 @@ const ReportsCenter: React.FC<Props> = ({ voters, cabos, profile }) => {
 
   return (
     <div className="max-w-6xl mx-auto space-y-10 animate-in fade-in duration-500">
-      {/* Header da Central */}
       <div className="bg-white p-10 rounded-[3rem] shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-8">
         <div className="flex-1">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-indigo-50 rounded-full text-[10px] font-black uppercase tracking-[0.2em] mb-4 text-indigo-600">
@@ -82,7 +79,6 @@ const ReportsCenter: React.FC<Props> = ({ voters, cabos, profile }) => {
         </div>
       </div>
 
-      {/* Grid de Relatórios */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {reports.map((report, index) => (
           <div 
@@ -114,7 +110,6 @@ const ReportsCenter: React.FC<Props> = ({ voters, cabos, profile }) => {
         ))}
       </div>
 
-      {/* Footer Informativo */}
       <div className="bg-indigo-600 p-8 rounded-[2.5rem] text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl shadow-indigo-200">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-white/10 rounded-2xl">

@@ -1,6 +1,6 @@
 
 import { GoogleGenAI } from "@google/genai";
-import { PoliticalProfile } from "../types";
+import { PoliticalProfile, Appointment, Voter } from "../types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
 
@@ -58,6 +58,31 @@ export async function generateBulkCampaignMessage(location: string, politician: 
   }
 }
 
+export async function generateMeetingBriefing(appointment: Appointment, profile: PoliticalProfile): Promise<string> {
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Você é um estrategista político. Prepare um briefing curto para o candidato ${profile.name} (${profile.office}) para o seguinte compromisso:
+      Título: ${appointment.title}
+      Local: ${appointment.location}
+      Tipo: ${appointment.type}
+      Notas: ${appointment.description}
+      
+      O briefing deve conter:
+      1. Três pontos principais de fala.
+      2. Uma recomendação de postura (ex: ouvir mais que falar, ser incisivo, etc).
+      3. Um alerta de pauta sensível baseada no tipo de evento.
+      Seja muito conciso e direto.`,
+      config: {
+        temperature: 0.6,
+      }
+    });
+    return response.text || "Prepare-se para ouvir as demandas locais e reforçar seu compromisso com a transparência.";
+  } catch (error) {
+    return "Foco total na escuta ativa e no registro das solicitações da comunidade.";
+  }
+}
+
 export async function performStrategicResearch(query: string, politician: PoliticalProfile): Promise<{ text: string, sources: { uri: string, title: string }[] }> {
   try {
     const response = await ai.models.generateContent({
@@ -73,7 +98,6 @@ export async function performStrategicResearch(query: string, politician: Politi
     const text = response.text || "Não foi possível obter uma resposta no momento.";
     const sources: { uri: string, title: string }[] = [];
     
-    // Extrair fontes do groundingMetadata
     const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
     if (chunks) {
       chunks.forEach((chunk: any) => {
