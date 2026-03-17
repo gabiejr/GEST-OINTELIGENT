@@ -57,3 +57,23 @@ export interface Appointment {
 }
 
 export interface VoterFormData extends Omit<Voter, 'id' | 'createdAt' | 'helpRecords'> {}
+
+export interface CommemorativeDate {
+  id: string;
+  day: number;
+  month: number;
+  title: string;
+  message: string;
+  category: 'feriado' | 'social' | 'religioso' | 'outro';
+}
+
+export interface Expense {
+  id: string;
+  description: string;
+  amount: number;
+  date: string; // ISO string YYYY-MM-DD
+  type: 'entrada' | 'saida';
+  category: 'alimentacao' | 'transporte' | 'marketing' | 'pessoal' | 'eventos' | 'doacao' | 'recurso_proprio' | 'partidario' | 'outros';
+  paymentMethod: 'dinheiro' | 'cartao' | 'pix' | 'transferencia';
+}
+

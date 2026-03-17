@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Voter, VoterFormData, HelpRecord, PoliticalProfile, CaboEleitoral, Appointment } from './types';
+import { Voter, VoterFormData, HelpRecord, PoliticalProfile, CaboEleitoral, Appointment, Expense } from './types';
 import VoterList from './components/VoterList';
 import VoterForm from './components/VoterForm';
 import CaboForm from './components/CaboForm';
@@ -14,6 +14,8 @@ import AIAdvisor from './components/AIAdvisor';
 import ReportsCenter from './components/ReportsCenter';
 import AgendaManager from './components/AgendaManager';
 import PoliticalBot from './components/PoliticalBot';
+import CommemorativeCalendar from './components/CommemorativeCalendar';
+import ExpenseManager from './components/ExpenseManager';
 import { exportVotersToPDF, exportVoterHistoryPDF } from './services/pdf';
 import { 
   Users, 
@@ -40,10 +42,11 @@ import {
   Flag,
   Target,
   CalendarDays,
-  Phone
+  Phone,
+  DollarSign
 } from 'lucide-react';
 
-const ADMIN_PASSWORD = '101085';
+const ADMIN_PASSWORD = '123';
 
 const DEFAULT_PROFILE: PoliticalProfile = {
   name: 'Elias da Fonte',
@@ -65,35 +68,86 @@ const App: React.FC = () => {
   const [voters, setVoters] = useState<Voter[]>([]);
   const [cabos, setCabos] = useState<CaboEleitoral[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'list' | 'family' | 'add' | 'edit' | 'help' | 'profile' | 'cabos' | 'bulk' | 'birthdays' | 'advisor' | 'reports' | 'agenda'>('dashboard');
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'list' | 'family' | 'add' | 'edit' | 'help' | 'profile' | 'cabos' | 'bulk' | 'birthdays' | 'advisor' | 'reports' | 'agenda' | 'calendar' | 'expenses'>('dashboard');
   const [searchTerm, setSearchTerm] = useState('');
   const [editingVoter, setEditingVoter] = useState<Voter | null>(null);
+  const [editingCabo, setEditingCabo] = useState<CaboEleitoral | null>(null);
+  const [isAddingCabo, setIsAddingCabo] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
 
+  // Carregar dados do servidor (baseado no IP) ao iniciar
   useEffect(() => {
-    const savedVoters = localStorage.getItem('voters_data');
-    if (savedVoters) setVoters(JSON.parse(savedVoters));
-    
-    const savedCabos = localStorage.getItem('cabos_data');
-    if (savedCabos) setCabos(JSON.parse(savedCabos));
+    const fetchData = async () => {
+      try {
+        const response = await fetch('/api/data');
+        const data = await response.json();
+        if (data) {
+          if (data.voters) setVoters(data.voters);
+          if (data.cabos) setCabos(data.cabos);
+          if (data.appointments) setAppointments(data.appointments);
+          if (data.expenses) setExpenses(data.expenses);
+          if (data.politicalProfile) setPoliticalProfile(data.politicalProfile);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar dados do servidor:", error);
+        // Fallback para localStorage se o servidor falhar
+        const savedVoters = localStorage.getItem('voters_data');
+        if (savedVoters) setVoters(JSON.parse(savedVoters));
+        const savedCabos = localStorage.getItem('cabos_data');
+        if (savedCabos) setCabos(JSON.parse(savedCabos));
+        const savedAppointments = localStorage.getItem('appointments_data');
+        if (savedAppointments) setAppointments(JSON.parse(savedAppointments));
+        const savedExpenses = localStorage.getItem('expenses_data');
+        if (savedExpenses) setExpenses(JSON.parse(savedExpenses));
+        const savedProfile = localStorage.getItem('political_profile');
+        if (savedProfile) setPoliticalProfile(JSON.parse(savedProfile));
+      } finally {
+        setIsLoaded(true);
+      }
+    };
 
-    const savedAppointments = localStorage.getItem('appointments_data');
-    if (savedAppointments) setAppointments(JSON.parse(savedAppointments));
-
-    const savedProfile = localStorage.getItem('political_profile');
-    if (savedProfile) {
-      setPoliticalProfile(JSON.parse(savedProfile));
-    } else {
-      localStorage.setItem('political_profile', JSON.stringify(DEFAULT_PROFILE));
-    }
+    fetchData();
 
     const sessionAuth = sessionStorage.getItem('admin_auth');
     if (sessionAuth === 'true') setIsAuthenticated(true);
   }, []);
 
-  useEffect(() => { localStorage.setItem('voters_data', JSON.stringify(voters)); }, [voters]);
-  useEffect(() => { localStorage.setItem('cabos_data', JSON.stringify(cabos)); }, [cabos]);
-  useEffect(() => { localStorage.setItem('appointments_data', JSON.stringify(appointments)); }, [appointments]);
-  useEffect(() => { localStorage.setItem('political_profile', JSON.stringify(politicalProfile)); }, [politicalProfile]);
+  // Salvar dados no servidor e no localStorage sempre que houver mudanças
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    const saveData = async () => {
+      const dataToSave = {
+        voters,
+        cabos,
+        appointments,
+        expenses,
+        politicalProfile
+      };
+
+      // Salvar no localStorage como backup
+      localStorage.setItem('voters_data', JSON.stringify(voters));
+      localStorage.setItem('cabos_data', JSON.stringify(cabos));
+      localStorage.setItem('appointments_data', JSON.stringify(appointments));
+      localStorage.setItem('expenses_data', JSON.stringify(expenses));
+      localStorage.setItem('political_profile', JSON.stringify(politicalProfile));
+
+      // Salvar no servidor (baseado no IP)
+      try {
+        await fetch('/api/data', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(dataToSave)
+        });
+      } catch (error) {
+        console.error("Erro ao salvar dados no servidor:", error);
+      }
+    };
+
+    const timeoutId = setTimeout(saveData, 1000); // Debounce de 1 segundo
+    return () => clearTimeout(timeoutId);
+  }, [voters, cabos, appointments, expenses, politicalProfile, isLoaded]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,6 +183,30 @@ const App: React.FC = () => {
     setActiveTab('list');
   };
 
+  // Funções de Cabos
+  const addCabo = (data: Omit<CaboEleitoral, 'id' | 'hiredAt'>) => {
+    const newCabo: CaboEleitoral = { 
+      ...data, 
+      id: crypto.randomUUID(), 
+      hiredAt: new Date().toISOString() 
+    };
+    setCabos(prev => [newCabo, ...prev]);
+    setIsAddingCabo(false);
+  };
+
+  const updateCabo = (data: Omit<CaboEleitoral, 'id' | 'hiredAt'>) => {
+    if (!editingCabo) return;
+    setCabos(prev => prev.map(c => c.id === editingCabo.id ? { ...c, ...data } : c));
+    setEditingCabo(null);
+  };
+
+  const deleteCabo = (id: string) => {
+    if (confirm("Deseja realmente excluir esta liderança? Todos os eleitores vinculados ficarão sem cabo eleitoral.")) {
+      setCabos(prev => prev.filter(c => c.id !== id));
+      setVoters(prev => prev.map(v => v.caboId === id ? { ...v, caboId: undefined } : v));
+    }
+  };
+
   // Funções de Agenda
   const addAppointment = (data: Omit<Appointment, 'id'>) => {
     const newApt: Appointment = { ...data, id: crypto.randomUUID() };
@@ -142,6 +220,18 @@ const App: React.FC = () => {
   const deleteAppointment = (id: string) => {
     if(confirm("Deseja realmente excluir este compromisso?")) {
       setAppointments(prev => prev.filter(a => a.id !== id));
+    }
+  };
+
+  // Funções de Gastos
+  const addExpense = (data: Omit<Expense, 'id'>) => {
+    const newExpense: Expense = { ...data, id: crypto.randomUUID() };
+    setExpenses(prev => [newExpense, ...prev]);
+  };
+
+  const deleteExpense = (id: string) => {
+    if (confirm("Deseja realmente excluir este registro de gasto?")) {
+      setExpenses(prev => prev.filter(e => e.id !== id));
     }
   };
 
@@ -220,6 +310,8 @@ const App: React.FC = () => {
         <div className="flex-1 px-4 space-y-2">
           <NavButton active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<LayoutDashboard size={20}/>} label="Dashboard" />
           <NavButton active={activeTab === 'agenda'} onClick={() => setActiveTab('agenda')} icon={<CalendarDays size={20}/>} label="Minhas Agendas" color="indigo-glow" />
+          <NavButton active={activeTab === 'calendar'} onClick={() => setActiveTab('calendar')} icon={<CalendarDays size={20}/>} label="Datas Comemorativas" color="pink" />
+          <NavButton active={activeTab === 'expenses'} onClick={() => setActiveTab('expenses')} icon={<DollarSign size={20}/>} label="Controle de Gastos" color="red" />
           <NavButton active={activeTab === 'advisor'} onClick={() => setActiveTab('advisor')} icon={<BrainCircuit size={20}/>} label="Consultoria IA" />
           <NavButton active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} icon={<FileBarChart size={20}/>} label="Relatórios PDF" color="emerald" />
           <NavButton active={activeTab === 'bulk'} onClick={() => setActiveTab('bulk')} icon={<MessageSquare size={20}/>} label="Envios em Massa" color="emerald" />
@@ -275,7 +367,48 @@ const App: React.FC = () => {
           )}
           
           {activeTab === 'advisor' && <AIAdvisor profile={politicalProfile} />}
+          {activeTab === 'calendar' && <CommemorativeCalendar voters={voters} profile={politicalProfile} />}
+          {activeTab === 'expenses' && <ExpenseManager expenses={expenses} onAdd={addExpense} onDelete={deleteExpense} />}
           {activeTab === 'bulk' && <BulkMessenger voters={voters} profile={politicalProfile} />}
+          
+          {activeTab === 'cabos' && (
+            <div className="space-y-8 animate-in fade-in duration-500">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-4xl font-black text-slate-800">Minha Equipe</h2>
+                  <p className="text-slate-400 font-medium mt-1">Lideranças e cabos eleitorais estratégicos</p>
+                </div>
+                {!isAddingCabo && !editingCabo && (
+                  <button 
+                    onClick={() => setIsAddingCabo(true)}
+                    className="px-6 py-4 bg-orange-500 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-orange-600 transition-all shadow-lg shadow-orange-200 flex items-center gap-3 active:scale-95"
+                  >
+                    <UserPlus size={18} /> Nova Liderança
+                  </button>
+                )}
+              </div>
+
+              {(isAddingCabo || editingCabo) ? (
+                <div className="max-w-2xl mx-auto bg-white p-10 rounded-[2.5rem] shadow-xl border border-slate-100">
+                  <CaboForm 
+                    scope={politicalProfile.scope} 
+                    onSubmit={editingCabo ? updateCabo : addCabo} 
+                    onCancel={() => { setIsAddingCabo(false); setEditingCabo(null); }} 
+                    initialData={editingCabo || undefined} 
+                  />
+                </div>
+              ) : (
+                <CaboList 
+                  cabos={cabos} 
+                  voters={voters} 
+                  onDelete={deleteCabo} 
+                  onEdit={(c) => setEditingCabo(c)} 
+                  scope={politicalProfile.scope} 
+                />
+              )}
+            </div>
+          )}
+
           {activeTab === 'list' && (
             <div className="space-y-8 animate-in fade-in duration-500">
               <div className="flex justify-between items-center"><h2 className="text-4xl font-black text-slate-800">Eleitores Cadastrados</h2></div>

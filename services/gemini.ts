@@ -119,3 +119,39 @@ export async function performStrategicResearch(query: string, politician: Politi
     };
   }
 }
+
+export async function generateCommemorativeImage(dateTitle: string, politician: PoliticalProfile): Promise<string | null> {
+  try {
+    const prompt = `Crie uma imagem artística e profissional para um card de WhatsApp comemorando o ${dateTitle}. 
+    O estilo deve ser limpo, moderno e inspirador, adequado para uma comunicação política institucional. 
+    Não inclua textos na imagem. 
+    Foque em elementos simbólicos da data (ex: se for Natal, use elementos natalinos elegantes; se for Dia da Mulher, use flores e silhuetas femininas fortes). 
+    A composição deve ser centralizada e equilibrada.`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash-image',
+      contents: {
+        parts: [
+          {
+            text: prompt,
+          },
+        ],
+      },
+      config: {
+        imageConfig: {
+          aspectRatio: "1:1",
+        },
+      },
+    });
+
+    for (const part of response.candidates?.[0]?.content?.parts || []) {
+      if (part.inlineData) {
+        return `data:image/png;base64,${part.inlineData.data}`;
+      }
+    }
+    return null;
+  } catch (error) {
+    console.error("Erro ao gerar imagem comemorativa:", error);
+    return null;
+  }
+}
